@@ -115,11 +115,7 @@ class ProfileScreen extends StatelessWidget {
               title: 'Log Out', 
               textColor: AppColors.error, 
               onTap: () {
-                context.read<ParkingProvider>().dispose(); // Actually provider disposal is handled by tree, just signout
-                // Actually we just need to signout auth
-                // But since logic is in AuthService, and provided exposed?
-                // Provider doesn't expose signOut directly, let's fix that or use AuthService directly.
-                // Or better, update Provider to have signOut
+                context.read<ParkingProvider>().signOut();
               }
             ),
             

@@ -1,27 +1,52 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/app_colors.dart';
-import '../../data/mock_user_data.dart';
+import '../../providers/parking_provider.dart';
 import 'package:intl/intl.dart';
 
-class ActivityScreen extends StatelessWidget {
+class ActivityScreen extends StatefulWidget {
   const ActivityScreen({Key? key}) : super(key: key);
 
   @override
+  State<ActivityScreen> createState() => _ActivityScreenState();
+}
+
+class _ActivityScreenState extends State<ActivityScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ParkingProvider>().fetchHistory();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // In a real app we might merge active/past here but for phase 3 we just show list
     return Scaffold(
       appBar: AppBar(
         title: const Text('Activity'),
         centerTitle: true,
-        automaticallyImplyLeading: false, // Managed by bottom nav mostly
+        automaticallyImplyLeading: false, 
       ),
-      body: MockUserData.history.isEmpty
-          ? const Center(child: Text('No past activity'))
-          : ListView.builder(
+      body: Consumer<ParkingProvider>(
+        builder: (context, provider, child) {
+          final history = provider.pastBookings;
+          
+          if (history.isEmpty) {
+             return const Center(child: Text('No past activity'));
+          }
+
+          return ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: MockUserData.history.length,
+              itemCount: history.length,
               itemBuilder: (context, index) {
-                final booking = MockUserData.history[index];
+                final booking = history[index];
+                // Calculate duration string
+                final duration = booking.endTime.difference(booking.startTime);
+                final hours = duration.inHours;
+                final minutes = duration.inMinutes.remainder(60);
+                final durationStr = '${hours}h ${minutes}m';
+
                 return Container(
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
@@ -36,7 +61,7 @@ class ActivityScreen extends StatelessWidget {
                         leading: ClipRRect(
                           borderRadius: BorderRadius.circular(8),
                           child: Image.network(
-                            booking.imageUrl,
+                            booking.spot.imageUrl,
                             width: 60,
                             height: 60,
                             fit: BoxFit.cover,
@@ -46,17 +71,17 @@ class ActivityScreen extends StatelessWidget {
                           ),
                         ),
                         title: Text(
-                          booking.spotTitle,
+                          booking.spot.title,
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const SizedBox(height: 4),
-                            Text(booking.spotAddress),
+                            Text(booking.spot.address),
                             const SizedBox(height: 4),
                             Text(
-                              DateFormat('MMM d, yyyy • h:mm a').format(booking.date),
+                              DateFormat('MMM d, yyyy • h:mm a').format(booking.startTime),
                               style: const TextStyle(fontSize: 12),
                             ),
                           ],
@@ -94,7 +119,7 @@ class ActivityScreen extends StatelessWidget {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Duration: ${booking.duration}', style: const TextStyle(color: AppColors.secondary)),
+                            Text('Duration: $durationStr', style: const TextStyle(color: AppColors.secondary)),
                             Row(
                               children: [
                                 const Icon(Icons.refresh, size: 16, color: AppColors.accent),
@@ -115,7 +140,9 @@ class ActivityScreen extends StatelessWidget {
                   ),
                 );
               },
-            ),
+            );
+        },
+      ),
     );
   }
 }

@@ -112,31 +112,44 @@ class FirestoreService {
       .where('status', isEqualTo: 'active')
       .snapshots()
       .map((snapshot) {
-        return snapshot.docs.map((doc) {
-          final data = doc.data();
-          final spotData = data['spotData'] ?? {};
-          
-          // Reconstruct partial spot for display
-          final spot = ParkingSpot(
-            id: data['spotId'],
-            title: spotData['title'] ?? data['spotTitle'] ?? 'Unknown',
-            address: spotData['address'] ?? '',
-            pricePerHour: 0, // Not needed for active view display strictly
-            distanceKm: 0,
-            imageUrl: spotData['imageUrl'] ?? '',
-            rating: 0,
-            reviews: 0,
-            amenities: [],
-          );
-
-          return BookingSession(
-            id: doc.id,
-            spot: spot,
-            startTime: (data['startTime'] as Timestamp).toDate(),
-            endTime: (data['endTime'] as Timestamp).toDate(),
-            totalCost: (data['totalCost'] as num).toDouble(),
-          );
-        }).toList();
+        return snapshot.docs.map((doc) => _mapDocToSession(doc)).toList();
       });
+  }
+
+  // Fetch past bookings
+  Future<List<BookingSession>> getPastBookings(String userId) async {
+    final snapshot = await _db.collection('bookings')
+      .where('userId', isEqualTo: userId)
+      .where('status', isEqualTo: 'completed')
+      .orderBy('endTime', descending: true)
+      .get();
+    
+    return snapshot.docs.map((doc) => _mapDocToSession(doc)).toList();
+  }
+
+  BookingSession _mapDocToSession(QueryDocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    final spotData = data['spotData'] ?? {};
+    
+    // Reconstruct partial spot for display
+    final spot = ParkingSpot(
+      id: data['spotId'] ?? '',
+      title: spotData['title'] ?? data['spotTitle'] ?? 'Unknown',
+      address: spotData['address'] ?? '',
+      pricePerHour: 0, 
+      distanceKm: 0,
+      imageUrl: spotData['imageUrl'] ?? '',
+      rating: 0,
+      reviews: 0,
+      amenities: [],
+    );
+
+    return BookingSession(
+      id: doc.id,
+      spot: spot,
+      startTime: (data['startTime'] as Timestamp).toDate(),
+      endTime: (data['endTime'] as Timestamp).toDate(),
+      totalCost: (data['totalCost'] as num).toDouble(),
+    );
   }
 }

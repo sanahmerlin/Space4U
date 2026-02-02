@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../data/mock_data.dart';
+import '../services/auth_service.dart';
+import '../services/firestore_service.dart';
 
 class BookingSession {
   final String id; // Firestore Doc ID
@@ -23,18 +26,6 @@ class BookingSession {
     return endTime.difference(now);
   }
 }
-
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'dart:async';
-import '../data/mock_data.dart';
-import '../services/auth_service.dart';
-import '../services/firestore_service.dart';
-
-// Re-export nested class or move to model file. For now keeping here.
-// But we updated the class definition above partially.
-// Ideally BookingSession should be in a model file.
-// Assuming the previous tool call updated the class definition at the top of this file.
 
 class ParkingProvider extends ChangeNotifier {
   final AuthService _auth = AuthService();
@@ -150,6 +141,16 @@ class ParkingProvider extends ChangeNotifier {
     // Stream updates UI
   }
 
+  // History State
+  List<BookingSession> _pastBookings = [];
+  List<BookingSession> get pastBookings => _pastBookings;
+
+  Future<void> fetchHistory() async {
+    if (_currentUser == null) return;
+    _pastBookings = await _firestore.getPastBookings(_currentUser!.uid);
+    notifyListeners();
+  }
+
   // Timer for UI updates
   void _startTimer() {
     _timer?.cancel();
@@ -160,6 +161,14 @@ class ParkingProvider extends ChangeNotifier {
       }
       notifyListeners();
     });
+  }
+
+  // Sign Out
+  Future<void> signOut() async {
+    await _auth.signOut();
+    _filteredSpots = [];
+    _activeSession = null;
+    notifyListeners();
   }
 
   @override

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../core/app_colors.dart';
-import '../../services/auth_service.dart';
+import '../../../core/app_colors.dart';
+import '../../../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback onSignUpClicked;
