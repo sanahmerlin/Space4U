@@ -29,6 +29,26 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  void _resetPassword() async {
+    if (_emailCtrl.text.trim().isEmpty) {
+      if (mounted) setState(() => _error = 'Please enter your email to reset password');
+      return;
+    }
+    setState(() { _isLoading = true; _error = null; });
+    try {
+      await _auth.resetPassword(_emailCtrl.text.trim());
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Password reset link sent to your email')),
+        );
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString().split(']').last.trim());
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -61,6 +81,13 @@ class _LoginScreenState extends State<LoginScreen> {
               obscureText: true,
             ),
             const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: _isLoading ? null : _resetPassword,
+                child: const Text('Forgot Password?'),
+              ),
+            ),
             if (_error != null)
               Text(_error!, style: const TextStyle(color: AppColors.error, fontSize: 13)),
             const SizedBox(height: 24),

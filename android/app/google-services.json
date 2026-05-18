@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "153877902532",
+    "project_id": "space4u-final",
+    "storage_bucket": "space4u-final.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:153877902532:android:11c55269c9ca7f555d8591",
+        "android_client_info": {
+          "package_name": "com.space4u.space4u"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyABfRF4lBTytsApBy-Uw9-j1M2Fz3Kqopw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,60 +1,101 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../data/mock_data.dart';
+import '../models/parking_spot.dart';
+import '../models/vehicle.dart';
 import '../providers/parking_provider.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // --- Spots ---
+  // ─── SPOTS ────────────────────────────────────────────────────────────────
 
-  // Fetch all spots (simulating search by just fetching all then filtering client-side for MVP simplify)
   Future<List<ParkingSpot>> getSpots() async {
-    // Check if we need to seed
-    // For performance, in a real app we'd paginate or use Algolia.
-    // MVP: Get all spots from 'spots' collection.
-    
-    final snapshot = await _db.collection('spots').get();
-    if (snapshot.docs.isEmpty) {
-      // Auto-seed if empty
-      await _seedSpots();
-      return MockData.parkingSpots;
-    }
-
-    return snapshot.docs.map((doc) {
-      final data = doc.data();
-      return ParkingSpot(
-        id: doc.id,
-        title: data['title'] ?? '',
-        address: data['address'] ?? '',
-        pricePerHour: (data['pricePerHour'] as num).toDouble(),
-        distanceKm: (data['distanceKm'] as num).toDouble(),
-        imageUrl: data['imageUrl'] ?? '',
-        rating: (data['rating'] as num).toDouble(),
-        reviews: data['reviews'] ?? 0,
-        amenities: List<String>.from(data['amenities'] ?? []),
-      );
-    }).toList();
+    final snapshot = await _db
+        .collection('spots')
+        .where('verificationStatus', isEqualTo: 'verified')
+        .get();
+    return snapshot.docs.map((doc) => _mapDocToSpot(doc)).toList();
   }
 
-  Future<void> _seedSpots() async {
-    final batch = _db.batch();
-    for (var spot in MockData.parkingSpots) {
-      final ref = _db.collection('spots').doc(spot.id);
-      batch.set(ref, {
-        'title': spot.title,
-        'address': spot.address,
-        'pricePerHour': spot.pricePerHour,
-        'distanceKm': spot.distanceKm,
-        'imageUrl': spot.imageUrl,
-        'rating': spot.rating,
-        'reviews': spot.reviews,
-        'amenities': spot.amenities,
-      });
-    }
-    await batch.commit();
+  Future<List<ParkingSpot>> getMySpots(String ownerId) async {
+    final snapshot = await _db
+        .collection('spots')
+        .where('ownerId', isEqualTo: ownerId)
+        .get();
+    return snapshot.docs.map((doc) => _mapDocToSpot(doc)).toList();
   }
 
-  // --- Bookings ---
+  Future<void> addSpot({
+    required String ownerId,
+    required String title,
+    required String address,
+    required double latitude,
+    required double longitude,
+    required double pricePerHour,
+    required double distanceKm,
+    required String imageUrl,
+    required List<String> amenities,
+    required String arrivalInstructions,
+  }) async {
+    await _db.collection('spots').add({
+      'ownerId': ownerId,
+      'title': title,
+      'address': address,
+      'latitude': latitude,
+      'longitude': longitude,
+      'pricePerHour': pricePerHour,
+      'distanceKm': distanceKm,
+      'imageUrl': imageUrl,
+      'rating': 0.0,
+      'reviews': 0,
+      'amenities': amenities,
+      'arrivalInstructions': arrivalInstructions,
+      'verificationStatus': 'pending', // Phase 4: Trust Architecture
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Stream<List<Map<String, dynamic>>> streamMySpots(String ownerId) {
+    return _db
+        .collection('spots')
+        .where('ownerId', isEqualTo: ownerId)
+        .snapshots()
+        .map((snap) => snap.docs
+            .map((d) => {'id': d.id, ...d.data()})
+            .toList());
+  }
+
+  Future<void> deleteSpot(String spotId) async {
+    await _db.collection('spots').doc(spotId).delete();
+  }
+
+  Future<void> verifySpotManually(String spotId) async {
+    await _db.collection('spots').doc(spotId).update({
+      'verificationStatus': 'verified',
+      'verifiedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  ParkingSpot _mapDocToSpot(QueryDocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return ParkingSpot(
+      id: doc.id,
+      ownerId: data['ownerId'] ?? '',
+      title: data['title'] ?? '',
+      address: data['address'] ?? '',
+      latitude: (data['latitude'] as num?)?.toDouble() ?? 37.7749,
+      longitude: (data['longitude'] as num?)?.toDouble() ?? -122.4194,
+      pricePerHour: (data['pricePerHour'] as num).toDouble(),
+      distanceKm: (data['distanceKm'] as num?)?.toDouble() ?? 0.0,
+      imageUrl: data['imageUrl'] ?? '',
+      rating: (data['rating'] as num?)?.toDouble() ?? 0.0,
+      reviews: (data['reviews'] as num?)?.toInt() ?? 0,
+      amenities: List<String>.from(data['amenities'] ?? []),
+      arrivalInstructions: data['arrivalInstructions'] ?? '',
+      verificationStatus: data['verificationStatus'] ?? 'pending',
+    );
+  }
+
+  // ─── BOOKINGS ─────────────────────────────────────────────────────────────
 
   Future<void> createBooking({
     required String userId,
@@ -62,35 +103,139 @@ class FirestoreService {
     required int durationHours,
     required double totalCost,
   }) async {
-    final now = DateTime.now();
-    final endTime = now.add(Duration(hours: durationHours));
-    
-    await _db.collection('bookings').add({
+    final Map<String, dynamic> bookingData = {
       'userId': userId,
       'spotId': spot.id,
-      'spotTitle': spot.title, // store title snapshot
-      'startTime': Timestamp.fromDate(now),
-      'endTime': Timestamp.fromDate(endTime),
-      'durationHours': durationHours,
+      'hostId': spot.ownerId, // Added hostId for marketplace tracking
+      'startTime': FieldValue.serverTimestamp(),
+      'endTime': Timestamp.fromDate(DateTime.now().add(Duration(hours: durationHours))),
+      'status': 'active',
       'totalCost': totalCost,
-      'status': 'active', // active, completed, cancelled
-      'createdAt': FieldValue.serverTimestamp(),
-      'spotData': {  // Store snapshot for history display
-         'title': spot.title,
-         'address': spot.address,
-         'imageUrl': spot.imageUrl,
+      'vehicleId': 'unknown',
+      'vehicleName': 'Default Car',
+      'spotData': {
+        'title': spot.title,
+        'address': spot.address,
+        'imageUrl': spot.imageUrl,
+        'latitude': spot.latitude,
+        'longitude': spot.longitude,
       }
-    });
+    };
+
+    await _db.collection('bookings').add(bookingData);
   }
 
-  Future<void> extendBooking(String bookingId, int additionalMinutes, double addedCost) async {
+  Future<String> createBookingWithVehicle({
+    required String userId,
+    required ParkingSpot spot,
+    required DateTime startTime,
+    required DateTime endTime,
+    required double totalCost,
+    required Vehicle vehicle,
+  }) async {
+    final status = startTime.isAfter(DateTime.now()) ? 'reserved' : 'active';
+    
+    final docRef = await _db.collection('bookings').add({
+      'userId': userId,
+      'spotId': spot.id,
+      'hostId': spot.ownerId, // Added hostId for marketplace tracking
+      'vehicleId': vehicle.id,
+      'vehicleName': vehicle.name,
+      'startTime': Timestamp.fromDate(startTime),
+      'endTime': Timestamp.fromDate(endTime),
+      'status': status,
+      'totalCost': totalCost,
+      'spotData': {
+        'title': spot.title,
+        'address': spot.address,
+        'imageUrl': spot.imageUrl,
+        'latitude': spot.latitude,
+        'longitude': spot.longitude,
+      }
+    });
+
+    return docRef.id;
+  }
+
+  Stream<List<BookingSession>> streamHostBookings(String hostId) {
+    return _db
+        .collection('bookings')
+        .where('hostId', isEqualTo: hostId)
+        .snapshots()
+        .map((snap) => snap.docs.map(_mapDocToSession).toList());
+  }
+
+  Future<bool> isSpotAvailable(String spotId, DateTime start, DateTime end) async {
+    final snap = await _db
+        .collection('bookings')
+        .where('spotId', isEqualTo: spotId)
+        .where('status', whereIn: ['active', 'reserved'])
+        .get();
+
+    for (var doc in snap.docs) {
+      final existingStart = (doc['startTime'] as Timestamp).toDate();
+      final existingEnd = (doc['endTime'] as Timestamp).toDate();
+
+      // Skip expired sessions that haven't triggered auto-end yet
+      if (existingEnd.isBefore(DateTime.now())) continue;
+
+      // Conflict logic: (Start1 < End2) AND (End1 > Start2)
+      if (start.isBefore(existingEnd) && end.isAfter(existingStart)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  Future<Set<String>> getConflictingSpotIds(DateTime start, DateTime end) async {
+    final snap = await _db
+        .collection('bookings')
+        .where('status', whereIn: ['active', 'reserved'])
+        .get();
+
+    final Set<String> conflictingIds = {};
+    for (var doc in snap.docs) {
+      final existingStart = (doc['startTime'] as Timestamp).toDate();
+      final existingEnd = (doc['endTime'] as Timestamp).toDate();
+
+      if (existingEnd.isBefore(DateTime.now())) continue;
+
+      if (start.isBefore(existingEnd) && end.isAfter(existingStart)) {
+        conflictingIds.add(doc['spotId'] as String);
+      }
+    }
+    return conflictingIds;
+  }
+
+  Future<bool> isVehicleAvailable(String vehicleId, DateTime start, DateTime end) async {
+    final snap = await _db
+        .collection('bookings')
+        .where('vehicleId', isEqualTo: vehicleId)
+        .where('status', whereIn: ['active', 'reserved'])
+        .get();
+
+    for (var doc in snap.docs) {
+      final existingStart = (doc['startTime'] as Timestamp).toDate();
+      final existingEnd = (doc['endTime'] as Timestamp).toDate();
+
+      // Skip expired sessions that haven't triggered auto-end yet
+      if (existingEnd.isBefore(DateTime.now())) continue;
+
+      if (start.isBefore(existingEnd) && end.isAfter(existingStart)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  Future<void> extendBooking(
+      String bookingId, int additionalMinutes, double addedCost) async {
     final doc = await _db.collection('bookings').doc(bookingId).get();
     if (!doc.exists) return;
-    
-    final currentEnd = (doc.data()!['endTime'] as Timestamp).toDate();
+    final currentEnd =
+        (doc.data()!['endTime'] as Timestamp).toDate();
     final newEnd = currentEnd.add(Duration(minutes: additionalMinutes));
     final currentCost = (doc.data()!['totalCost'] as num).toDouble();
-
     await _db.collection('bookings').doc(bookingId).update({
       'endTime': Timestamp.fromDate(newEnd),
       'totalCost': currentCost + addedCost,
@@ -105,51 +250,179 @@ class FirestoreService {
     });
   }
 
-  // Stream active session for user
+  Future<void> updateBookingStatus(String bookingId, String status) async {
+    await _db.collection('bookings').doc(bookingId).update({
+      'status': status,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> markBookingVerified(String bookingId) async {
+    await _db.collection('bookings').doc(bookingId).update({
+      'isVerified': true,
+      'verifiedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
   Stream<List<BookingSession>> streamActiveSessions(String userId) {
-    return _db.collection('bookings')
-      .where('userId', isEqualTo: userId)
-      .where('status', isEqualTo: 'active')
-      .snapshots()
-      .map((snapshot) {
-        return snapshot.docs.map((doc) => _mapDocToSession(doc)).toList();
-      });
+    return _db
+        .collection('bookings')
+        .where('userId', isEqualTo: userId)
+        .where('status', whereIn: ['active', 'reserved'])
+        .snapshots()
+        .map((snap) => snap.docs.map(_mapDocToSession).toList());
   }
 
-  // Fetch past bookings
+  Stream<List<String>> streamAllOccupiedSpotIds() {
+    return _db
+        .collection('bookings')
+        .where('status', isEqualTo: 'active')
+        .snapshots()
+        .map((snap) => snap.docs
+            .map((doc) => (doc.data() as Map<String, dynamic>)['spotId'] as String)
+            .toList());
+  }
+
   Future<List<BookingSession>> getPastBookings(String userId) async {
-    final snapshot = await _db.collection('bookings')
-      .where('userId', isEqualTo: userId)
-      .where('status', isEqualTo: 'completed')
-      .orderBy('endTime', descending: true)
-      .get();
-    
-    return snapshot.docs.map((doc) => _mapDocToSession(doc)).toList();
+    final snap = await _db
+        .collection('bookings')
+        .where('userId', isEqualTo: userId)
+        .where('status', isEqualTo: 'completed')
+        .orderBy('endTime', descending: true)
+        .get();
+    return snap.docs.map(_mapDocToSession).toList();
   }
 
-  BookingSession _mapDocToSession(QueryDocumentSnapshot doc) {
+  BookingSession _mapDocToSession(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     final spotData = data['spotData'] ?? {};
-    
-    // Reconstruct partial spot for display
     final spot = ParkingSpot(
       id: data['spotId'] ?? '',
+      ownerId: data['hostId'] ?? '', // Added hostId mapping
       title: spotData['title'] ?? data['spotTitle'] ?? 'Unknown',
       address: spotData['address'] ?? '',
-      pricePerHour: 0, 
+      latitude: (spotData['latitude'] as num?)?.toDouble() ?? 37.7749,
+      longitude: (spotData['longitude'] as num?)?.toDouble() ?? -122.4194,
+      pricePerHour: 0,
       distanceKm: 0,
       imageUrl: spotData['imageUrl'] ?? '',
       rating: 0,
       reviews: 0,
       amenities: [],
+      arrivalInstructions: data['arrivalInstructions'] ?? '',
     );
-
     return BookingSession(
       id: doc.id,
       spot: spot,
+      status: data['status'] ?? 'active',
+      vehicleName: data['vehicleName'] ?? 'Default Car',
       startTime: (data['startTime'] as Timestamp).toDate(),
       endTime: (data['endTime'] as Timestamp).toDate(),
       totalCost: (data['totalCost'] as num).toDouble(),
+      isVerified: data['isVerified'] ?? false,
     );
+  }
+
+  // ─── USER VEHICLES ────────────────────────────────────────────────────────
+
+  Stream<List<Vehicle>> streamVehicles(String userId) {
+    return _db
+        .collection('users')
+        .doc(userId)
+        .collection('vehicles')
+        .snapshots()
+        .map((snap) => snap.docs
+            .map((d) => Vehicle.fromMap(d.id, d.data()))
+            .toList());
+  }
+
+  Future<void> addVehicle(
+      String userId, String name, String plate, bool isDefault) async {
+    await _db
+        .collection('users')
+        .doc(userId)
+        .collection('vehicles')
+        .add({
+      'name': name,
+      'licensePlate': plate,
+      'isDefault': isDefault,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> deleteVehicle(String userId, String vehicleId) async {
+    await _db
+        .collection('users')
+        .doc(userId)
+        .collection('vehicles')
+        .doc(vehicleId)
+        .delete();
+  }
+
+  // ─── WALLET ───────────────────────────────────────────────────────────────
+
+  Stream<Map<String, dynamic>> streamWallet(String userId) {
+    return _db.collection('users').doc(userId).snapshots().map((doc) {
+      final data = doc.data() ?? {};
+      return {
+        'balance': (data['walletBalance'] as num?)?.toDouble() ?? 0.0,
+      };
+    });
+  }
+
+  Stream<List<Map<String, dynamic>>> streamWalletTransactions(String userId) {
+    return _db
+        .collection('users')
+        .doc(userId)
+        .collection('walletTransactions')
+        .orderBy('date', descending: true)
+        .snapshots()
+        .map((snap) => snap.docs
+            .map((d) => {'id': d.id, ...d.data()})
+            .toList());
+  }
+
+  // ─── NOTIFICATIONS ────────────────────────────────────────────────────────
+
+  Stream<List<Map<String, dynamic>>> streamNotifications(String userId) {
+    return _db
+        .collection('users')
+        .doc(userId)
+        .collection('notifications')
+        .orderBy('date', descending: true)
+        .snapshots()
+        .map((snap) => snap.docs
+            .map((d) => {'id': d.id, ...d.data()})
+            .toList());
+  }
+
+  Future<void> markNotificationRead(String userId, String notifId) async {
+    await _db
+        .collection('users')
+        .doc(userId)
+        .collection('notifications')
+        .doc(notifId)
+        .update({'isRead': true});
+  }
+
+  // ─── WALLET TOP-UP ────────────────────────────────────────────────────────
+
+  Future<void> topUpWallet(String userId, double amount) async {
+    final userRef = _db.collection('users').doc(userId);
+    final txRef = userRef.collection('walletTransactions').doc();
+
+    await _db.runTransaction((tx) async {
+      final userSnap = await tx.get(userRef);
+      final currentBalance =
+          (userSnap.data()?['walletBalance'] as num?)?.toDouble() ?? 0.0;
+
+      tx.update(userRef, {'walletBalance': currentBalance + amount});
+      tx.set(txRef, {
+        'title': 'Top Up',
+        'amount': amount,
+        'isCredit': true,
+        'date': FieldValue.serverTimestamp(),
+      });
+    });
   }
 }

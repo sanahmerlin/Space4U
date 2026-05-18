@@ -3,13 +3,16 @@ import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
 class AppTheme {
-  static ThemeData get darkTheme {
+  static ThemeData getTheme(bool isHostMode) {
+    final Color accentColor = isHostMode ? AppColors.hostAccent : AppColors.accent;
+
     return ThemeData(
       brightness: Brightness.dark,
       scaffoldBackgroundColor: AppColors.background,
-      primaryColor: AppColors.accent,
-      colorScheme: const ColorScheme.dark(
-        primary: AppColors.accent,
+      primaryColor: accentColor,
+      colorScheme: ColorScheme.dark(
+        primary: accentColor,
+        secondary: accentColor,
         surface: AppColors.surface,
         onSurface: AppColors.primary,
         background: AppColors.background,
@@ -38,11 +41,11 @@ class AppTheme {
           color: AppColors.primary,
         ),
       ),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: AppColors.background,
         elevation: 0,
-        iconTheme: IconThemeData(color: AppColors.primary),
-        titleTextStyle: TextStyle(
+        iconTheme: const IconThemeData(color: AppColors.primary),
+        titleTextStyle: GoogleFonts.inter(
           color: AppColors.primary,
           fontSize: 20,
           fontWeight: FontWeight.w600,
@@ -60,7 +63,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide.none,
         ),
-        hintStyle: TextStyle(color: AppColors.secondary),
+        hintStyle: const TextStyle(color: AppColors.secondary),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 14,
@@ -68,7 +71,7 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.accent,
+          backgroundColor: accentColor,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           textStyle: GoogleFonts.inter(
@@ -76,7 +79,7 @@ class AppTheme {
             fontWeight: FontWeight.w600,
           ),
           padding: const EdgeInsets.symmetric(vertical: 16),
-          minimumSize: const Size(double.infinity, 50), // Full width by default
+          minimumSize: const Size(double.infinity, 50),
         ),
       ),
     );

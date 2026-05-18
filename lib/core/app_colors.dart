@@ -6,6 +6,7 @@ class AppColors {
   static const Color primary = Color(0xFFFFFFFF);
   static const Color secondary = Color(0xFFAAAAAA);
   static const Color accent = Color(0xFF276EF1); // Electric Blue, similar to Uber
+  static const Color hostAccent = Color(0xFF6200EE); // Deep Indigo/Purple for Host Mode
   static const Color success = Color(0xFF43A047);
   static const Color error = Color(0xFFE53935);
   static const Color divider = Color(0xFF333333);

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/app_colors.dart';
-import '../../data/mock_data.dart';
+import '../../models/parking_spot.dart';
 import '../screens/booking_screen.dart';
 
 class SpotDetailScreen extends StatelessWidget {

@@ -45,5 +45,20 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>comgooglemaps</string>
+		<string>iosamaps</string>
+		<string>googlechromes</string>
+		<string>https</string>
+	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Space4U needs your location to show available parking spots near you and provide navigation.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Space4U needs your location to provide real-time arrival alerts and session tracking.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Space4U needs your location for real-time parking navigation and session management.</string>
+	<key>io.flutter.embedded_views_preview</key>
+	<true/>
 </dict>
 </plist>

@@ -8,120 +8,88 @@ import 'activity_screen.dart';
 import 'vehicles_screen.dart';
 import 'payment_methods_screen.dart';
 import 'host_landing_screen.dart';
+import 'my_listings_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-        centerTitle: true,
-        automaticallyImplyLeading: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen())),
-          )
-        ],
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            const SizedBox(height: 20),
-            // User Header
-            Consumer<ParkingProvider>(
-              builder: (context, provider, _) {
-                final user = provider.currentUser;
-                return Column(
-                  children: [
-                    Stack(
-                      children: [
-                        CircleAvatar(
-                          radius: 50,
-                          backgroundColor: AppColors.surface,
-                          child: Text(
-                            user?.displayName?.substring(0, 1).toUpperCase() ?? 'U',
-                            style: const TextStyle(fontSize: 40, color: Colors.white),
-                          ),
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          const SizedBox(height: 20),
+          // Integrated Header
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: Row(
+              children: [
+                Text(
+                  'Profile',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -1.0,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          const SizedBox(height: 8),
+          // User Header
+          Consumer<ParkingProvider>(
+            builder: (context, provider, _) {
+              final user = provider.currentUser;
+              return Column(
+                children: [
+                  const SizedBox(height: 16),
+                  Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 50,
+                        backgroundColor: AppColors.surface,
+                        child: Text(
+                          user?.displayName?.substring(0, 1).toUpperCase() ?? 'U',
+                          style: const TextStyle(fontSize: 40, color: Colors.white, fontWeight: FontWeight.w900),
                         ),
-                        // Edit icon...
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      user?.displayName ?? 'Welcome',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(user?.email ?? '', style: TextStyle(color: Colors.grey[400])),
-                  ],
-                );
-              }
-            ),
-            const SizedBox(height: 32),
-            
-            // Host Banner
-            GestureDetector(
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HostLandingScreen())),
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.purple.shade900, Colors.deepPurple],
+                      ),
+                    ],
                   ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(Icons.maps_home_work, color: Colors.white),
-                    ),
-                    const SizedBox(width: 16),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Earn with Space4U', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                          Text('List your parking spot today', style: TextStyle(fontSize: 12, color: Colors.white70)),
-                        ],
-                      ),
-                    ),
-                    const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.white70),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            
-            // Menu Items
-            _buildMenuItem(context, icon: Icons.account_balance_wallet, title: 'Wallet', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WalletScreen()))),
-            _buildMenuItem(context, icon: Icons.history, title: 'History', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ActivityScreen()))),
-            _buildMenuItem(context, icon: Icons.directions_car, title: 'Vehicles', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VehiclesScreen()))),
-            _buildMenuItem(context, icon: Icons.credit_card, title: 'Payment Methods', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PaymentMethodsScreen()))),
-            const Divider(color: AppColors.divider),
-            _buildMenuItem(context, icon: Icons.settings, title: 'Settings', onTap: () {}),
-            _buildMenuItem(context, icon: Icons.help_outline, title: 'Support', onTap: () {}),
-            _buildMenuItem(
-              context, 
-              icon: Icons.logout, 
-              title: 'Log Out', 
-              textColor: AppColors.error, 
-              onTap: () {
-                context.read<ParkingProvider>().signOut();
-              }
-            ),
-            
-            const SizedBox(height: 40),
-          ],
-        ),
+                  const SizedBox(height: 16),
+                  Text(
+                    user?.displayName ?? 'Welcome',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(user?.email ?? '', style: TextStyle(color: Colors.grey[400], fontWeight: FontWeight.w500)),
+                ],
+              );
+            }
+          ),
+          const SizedBox(height: 32),
+          const SizedBox(height: 24),
+          
+          // Menu Items
+          _buildMenuItem(context, icon: Icons.account_balance_wallet, title: 'Wallet', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WalletScreen()))),
+          _buildMenuItem(context, icon: Icons.history, title: 'History', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ActivityScreen()))),
+          _buildMenuItem(context, icon: Icons.maps_home_work, title: 'My Listings', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyListingsScreen()))),
+          _buildMenuItem(context, icon: Icons.directions_car, title: 'Vehicles', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VehiclesScreen()))),
+          _buildMenuItem(context, icon: Icons.credit_card, title: 'Payment Methods', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PaymentMethodsScreen()))),
+          const Divider(color: AppColors.divider),
+          _buildMenuItem(context, icon: Icons.settings, title: 'Settings', onTap: () {}),
+          _buildMenuItem(context, icon: Icons.help_outline, title: 'Support', onTap: () {}),
+          _buildMenuItem(
+            context, 
+            icon: Icons.logout, 
+            title: 'Log Out', 
+            textColor: AppColors.error, 
+            onTap: () {
+              context.read<ParkingProvider>().signOut();
+            }
+          ),
+          
+          const SizedBox(height: 40),
+        ],
       ),
     );
   }

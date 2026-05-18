@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/app_colors.dart';
+import 'add_spot_screen.dart';
 
 class HostLandingScreen extends StatelessWidget {
   const HostLandingScreen({Key? key}) : super(key: key);
@@ -65,8 +66,11 @@ class HostLandingScreen extends StatelessWidget {
                     height: 56,
                     child: ElevatedButton(
                       onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Host Application flow coming soon!')),
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const AddSpotScreen(),
+                          ),
                         );
                       },
                       style: ElevatedButton.styleFrom(

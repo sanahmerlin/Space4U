@@ -1,7 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../data/mock_data.dart';
-import '../providers/parking_provider.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -20,7 +18,7 @@ class AuthService {
         email: email,
         password: password,
       );
-      
+
       // Create user profile in Firestore
       if (result.user != null) {
         await _firestore.collection('users').doc(result.user!.uid).set({
@@ -30,10 +28,10 @@ class AuthService {
           'createdAt': FieldValue.serverTimestamp(),
           'rating': 5.0, // Default for new users
         });
-        
+
         await result.user!.updateDisplayName(name);
       }
-      
+
       return result.user;
     } catch (e) {
       rethrow;
@@ -56,5 +54,14 @@ class AuthService {
   // Sign Out
   Future<void> signOut() async {
     await _auth.signOut();
+  }
+
+  // Password Reset
+  Future<void> resetPassword(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+    } catch (e) {
+      rethrow;
+    }
   }
 }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/app_colors.dart';
-import '../../data/mock_data.dart';
+import '../../providers/parking_provider.dart';
+import '../../models/parking_spot.dart';
 import '../screens/spot_detail_screen.dart';
 
 class ParkingSpotCard extends StatelessWidget {
@@ -32,16 +34,13 @@ class ParkingSpotCard extends StatelessWidget {
             // Image Placeholder
             ClipRRect(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-              child: Container(
+              child: Image.network(
+                spot.imageUrl,
                 height: 160,
                 width: double.infinity,
-                color: Colors.grey[800],
-                child: Image.network(
-                  spot.imageUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => const Center(
-                    child: Icon(Icons.image_not_supported, color: Colors.grey),
-                  ),
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => const Center(
+                  child: Icon(Icons.image_not_supported, color: Colors.grey),
                 ),
               ),
             ),
@@ -100,7 +99,7 @@ class ParkingSpotCard extends StatelessWidget {
                     children: [
                       _buildInfoBadge(context, Icons.star, '${spot.rating} (${spot.reviews})'),
                       const SizedBox(width: 12),
-                      _buildInfoBadge(context, Icons.directions_car, '${spot.distanceKm} km'),
+                      _buildInfoBadge(context, Icons.directions_car, '${spot.distanceKm.toStringAsFixed(1)} km'),
                     ],
                   ),
                 ],
